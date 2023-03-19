@@ -56,15 +56,18 @@ module.exports = {
                 return;
             }
         }
-        let problems;
+
+        let problems = [];
         try{
             problems = result.problems;
         }catch(err){
             await interaction.reply(`There is some problem with CF API, please try again later`);
+            return;
         }
     
         if(!problems.length){
             await interaction.reply(`Cannot find any requested problem, please try again`);
+            return;
         }
 
         problems = problems.filter(problem => (problem.rating != null && problem.rating >= min_rating && problem.rating <= max_rating 
