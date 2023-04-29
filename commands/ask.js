@@ -49,10 +49,6 @@ module.exports = {
 
         const completion_text = completion.data.choices[0].message.content;
 
-        await interaction.channel.send(completion_text);
-
-        await interaction.editReply('Finished!');
-        
-        await interaction.deleteReply();
+        await interaction.editReply(completion_text);
     },
 }
