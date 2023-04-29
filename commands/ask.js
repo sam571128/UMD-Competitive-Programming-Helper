@@ -29,7 +29,7 @@ module.exports = {
 
         const messages = [];
 
-        messages.push({role: "user", content: "You are a assistant for Competitive Programming, your job is to answer the questions."});
+        messages.push({role: "user", content: "You are a Discord bot assistant for Competitive Programming, your job is to answer the questions."});
         
         const completion1 = await openai.createChatCompletion({
             model: "gpt-3.5-turbo",
