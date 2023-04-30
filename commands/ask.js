@@ -16,7 +16,8 @@ module.exports = {
          .addStringOption(option =>
 			option
 				.setName('question')
-				.setDescription('Ask a question')),
+				.setDescription('Ask a question')
+                .setRequired(true)),
           
     async execute(interaction) {
         await interaction.deferReply();   

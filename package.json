@@ -10,8 +10,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@keyv/mongo": "^2.1.8",
+    "@sindresorhus/string-hash": "^2.0.0",
     "discord.js": "^14.8.0",
     "dotenv": "^16.0.3",
+    "keyv": "^4.5.2",
     "node-fetch": "^2.6.9",
     "openai": "^3.2.1",
     "random": "^4.1.0"
