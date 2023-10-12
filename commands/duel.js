@@ -21,17 +21,23 @@ module.exports = {
             option
                 .setName("min_rating")
                 .setDescription("Set the minimum rating of the problems")
-                .setRequired(true))
+                .setRequired(true)
+                .setMinValue(800)
+                .setMaxValue(3500))
         .addIntegerOption(option =>
             option
                 .setName("max_rating")
                 .setDescription("Set the maximum rating of the problems")
-                .setRequired(true))
+                .setRequired(true)
+                .setMinValue(800)
+                .setMaxValue(3500))
         .addIntegerOption(option =>
             option
                 .setName("minutes")
                 .setDescription("Set the time of the duel (in minutes)")
-                .setRequired(true)),
+                .setRequired(true)
+                .setMinValue(10)
+                .setMaxValue(1440)),
     allDuels: new Map(),
     async execute(interaction) {
         await interaction.deferReply();  
