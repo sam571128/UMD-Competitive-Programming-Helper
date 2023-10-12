@@ -8,7 +8,7 @@ module.exports = {
     async saveData(key, value) {
         keyv.set(key, value);
     },
-    async removeData(key, value) {
+    async removeData(key) {
         await keyv.delete(key)
     },
     async getData(key) {
