@@ -131,6 +131,7 @@ module.exports = {
             } else if (confirmation.customId === 'reject') {
                 await confirmation.update({ content: `<@${userB}> has rejected this duel.`, components: [], embeds: []});
                 await removeData(`IN DUEL_${userA}`)
+                return;
             }
         } catch (e) {
             await interaction.editReply({ content: 'Confirmation not received within 1 minute, cancelling', components: [], embeds: []});
