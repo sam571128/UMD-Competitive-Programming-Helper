@@ -98,21 +98,25 @@ class duelSystem {
         }
 
         if (this.time % 5 == 0){
-            let handleA = await getData(this.playerA);
-            let handleB = await getData(this.playerB);
+            try{
+                let handleA = await getData(this.playerA);
+                let handleB = await getData(this.playerB);
 
-            let problemStr = this.problems.map((p) => `[${p.name}](http://codeforces.com/contest/${p.contestId}/problem/${p.index})`).join('\n');
-            let difficultyStr = this.problems.map((p) => `Difficulty: ${p.rating} \t Score: ${p.score}`).join('\n');
+                let problemStr = this.problems.map((p) => `[${p.name}](http://codeforces.com/contest/${p.contestId}/problem/${p.index})`).join('\n');
+                let difficultyStr = this.problems.map((p) => `Difficulty: ${p.rating} \t Score: ${p.score}`).join('\n');
 
-            const statusEmbed = new EmbedBuilder()
-                    .setColor(0xC99136)
-                    .setTitle(`Current Status \n${handleA} Current Score ${this.scoreA} vs ${this.scoreB} Current Score ${handleB}`)
-                    .addFields(
-                        { name: 'Problems', value: problemStr },
-                        { name: 'Difficulty \& Score', value: difficultyStr },
-                        { name: 'Time Left (will be update every 5 seconds)', value: `${Math.floor(this.time / 60 / 24)} hours ${Math.floor(this.time / 60)} minutes ${this.time % 60} seconds`}
-                    );
-            await this.interaction.editReply({content: "", embeds: [statusEmbed]});
+                const statusEmbed = new EmbedBuilder()
+                        .setColor(0xC99136)
+                        .setTitle(`Current Status \n${handleA} Current Score ${this.scoreA} vs ${this.scoreB} Current Score ${handleB}`)
+                        .addFields(
+                            { name: 'Problems', value: problemStr },
+                            { name: 'Difficulty \& Score', value: difficultyStr },
+                            { name: 'Time Left (will be update every 5 seconds)', value: `${Math.floor(this.time / 60 / 24)} hours ${Math.floor(this.time / 60)} minutes ${this.time % 60} seconds`}
+                        );
+                await this.interaction.editReply({content: "", embeds: [statusEmbed]});
+            } catch (e) {
+                console.log("There is a issue!")
+            }
         }
     }
 
@@ -189,17 +193,21 @@ class duelSystem {
     async checkWinner() {
         // Check who the winner is, and announce the results
 
-        let handleA = await getData(this.playerA);
-        let handleB = await getData(this.playerB);
-        const endEmbed = new EmbedBuilder()
-                .setColor(0xFF0000)
-                .setTitle(`The duel has ended`)
-                .addFields(
-                    { name: `Score of ${handleA}`, value: `${this.scoreA}` },
-                    { name: `Score of ${handleB}`, value: `${this.scoreB}` },
-                    { name: 'Winner', value: (this.scoreA >= this.scoreB ? `<@${this.playerA}>` : `<@${this.playerB}>`) },
-                );
-        await this.interaction.editReply({content: "", embeds: [endEmbed]});
+        try{
+            let handleA = await getData(this.playerA);
+            let handleB = await getData(this.playerB);
+            const endEmbed = new EmbedBuilder()
+                    .setColor(0xFF0000)
+                    .setTitle(`The duel has ended`)
+                    .addFields(
+                        { name: `Score of ${handleA}`, value: `${this.scoreA}` },
+                        { name: `Score of ${handleB}`, value: `${this.scoreB}` },
+                        { name: 'Winner', value: (this.scoreA >= this.scoreB ? `<@${this.playerA}>` : `<@${this.playerB}>`) },
+                    );
+            await this.interaction.editReply({content: "", embeds: [endEmbed]});
+        } catch (e) {
+            console.log("There is an issue");
+        }
 
         await removeData(`IN DUEL_${this.playerA}`);
         await removeData(`IN DUEL_${this.playerB}`);
@@ -207,7 +215,7 @@ class duelSystem {
 
     async forceEnd() {
         // Force end the duel
-
+        
         let handleA = await getData(this.playerA);
         let handleB = await getData(this.playerB);
         if (this.timer != undefined){
