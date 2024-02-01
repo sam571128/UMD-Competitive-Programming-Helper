@@ -97,21 +97,23 @@ class duelSystem {
             return;
         }
 
-        let handleA = await getData(this.playerA);
-        let handleB = await getData(this.playerB);
+        if (this.time % 5 == 0){
+            let handleA = await getData(this.playerA);
+            let handleB = await getData(this.playerB);
 
-        let problemStr = this.problems.map((p) => `[${p.name}](http://codeforces.com/contest/${p.contestId}/problem/${p.index})`).join('\n');
-        let difficultyStr = this.problems.map((p) => `Difficulty: ${p.rating} \t Score: ${p.score}`).join('\n');
+            let problemStr = this.problems.map((p) => `[${p.name}](http://codeforces.com/contest/${p.contestId}/problem/${p.index})`).join('\n');
+            let difficultyStr = this.problems.map((p) => `Difficulty: ${p.rating} \t Score: ${p.score}`).join('\n');
 
-        const statusEmbed = new EmbedBuilder()
-                .setColor(0xC99136)
-                .setTitle(`Current Status \n${handleA} Current Score ${this.scoreA} vs ${this.scoreB} Current Score ${handleB}`)
-                .addFields(
-                    { name: 'Problems', value: problemStr },
-                    { name: 'Difficulty \& Score', value: difficultyStr },
-                    { name: 'Time Left', value: `${Math.floor(this.time / 60 / 24)} hours ${Math.floor(this.time / 60)} minutes ${this.time % 60} seconds`}
-                );
-        await this.interaction.editReply({content: "", embeds: [statusEmbed]});
+            const statusEmbed = new EmbedBuilder()
+                    .setColor(0xC99136)
+                    .setTitle(`Current Status \n${handleA} Current Score ${this.scoreA} vs ${this.scoreB} Current Score ${handleB}`)
+                    .addFields(
+                        { name: 'Problems', value: problemStr },
+                        { name: 'Difficulty \& Score', value: difficultyStr },
+                        { name: 'Time Left (will be update every 5 seconds)', value: `${Math.floor(this.time / 60 / 24)} hours ${Math.floor(this.time / 60)} minutes ${this.time % 60} seconds`}
+                    );
+            await this.interaction.editReply({content: "", embeds: [statusEmbed]});
+        }
     }
 
     async checkSubmissions() {
