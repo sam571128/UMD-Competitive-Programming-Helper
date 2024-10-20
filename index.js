@@ -9,6 +9,9 @@ const token  = process.env.token;
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.commands = new Collection();
 
+
+const daily = require('./commands/daily.js');
+
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
@@ -37,6 +40,13 @@ for (const file of eventFiles) {
 	}
 }
 
+// Initialize the daily problem scheduler after the bot is ready
+client.once('ready', () => {
+	console.log(`Logged in as ${client.user.tag}!`);
+
+	// Initialize daily problem scheduler
+	daily.initialize(client);
+});
+
 // Log in to Discord with your client's token
 client.login(token);
-

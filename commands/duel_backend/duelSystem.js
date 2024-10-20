@@ -54,8 +54,13 @@ class duelSystem {
             return;
         }
 
-        problems = problems.filter(problem => (problem.rating != null && problem.rating >= this.minRating && problem.rating <= this.maxRating 
-            && !problem.tags.includes('*special') && !problem.tags.length==0));
+        problems = problems.filter(problem => (
+            problem.rating != null && 
+            problem.rating >= this.minRating && 
+            problem.rating <= this.maxRating &&
+            !problem.tags.includes('*special') && 
+            problem.tags.length > 0  // Fix: Changed from problem.tags.length==0
+        ));
 
         while(this.problems.length < 5){
             let r = Math.round((Math.random()*(problems.length-1)));
@@ -109,31 +114,31 @@ class duelSystem {
                         .setColor(0xC99136)
                         .setTitle(`Current Status \n${handleA} Current Score ${this.scoreA} vs ${this.scoreB} Current Score ${handleB}`)
                         .addFields(
-                            { name: 'Problems', value: problemStr },
-                            { name: 'Difficulty \& Score', value: difficultyStr },
-                            { name: 'Time Left (will be update every 5 seconds)', value: `${Math.floor(this.time / 60 / 24)} hours ${Math.floor(this.time / 60)} minutes ${this.time % 60} seconds`}
+                            { name: 'Problems', value: problemStr || "No problems available" },
+                            { name: 'Difficulty & Score', value: difficultyStr || "No difficulty information available" },
+                            { name: 'Time Left', value: `${Math.floor(this.time / 3600)} hours ${Math.floor((this.time % 3600) / 60)} minutes ${this.time % 60} seconds`}
                         );
                 await this.interaction.editReply({content: "", embeds: [statusEmbed]});
             } catch (e) {
-                console.log("There is a issue!")
+                console.error("There is an issue updating status:", e);
             }
         }
     }
 
     async checkSubmissions() {
         // Check submissions of both players 
-        let solvedA = await this.checkSubmissionA();
-        let solvedB = await this.checkSubmissionB();
-        if (solvedA != undefined && solvedB != undefined) {
+        let [solvedA, solvedB] = await Promise.all([this.checkSubmissionA(), this.checkSubmissionB()]);
+        
+        if (solvedA !== undefined && solvedB !== undefined) {
             this.interaction.channel.send(`Both player has solved ${this.problems[solvedA].name}, and get ${this.problems[solvedA].score} points!`);
             this.scoreA += this.problems[solvedA].score;
             this.scoreB += this.problems[solvedA].score;
             this.problems.splice(solvedA, 1);
-        } else if (solvedA != undefined) {
+        } else if (solvedA !== undefined) {
             this.interaction.channel.send(`<@${this.playerA}> has solved ${this.problems[solvedA].name}, and get ${this.problems[solvedA].score} points!`);
             this.scoreA += this.problems[solvedA].score;
             this.problems.splice(solvedA, 1);
-        } else if (solvedB != undefined) {
+        } else if (solvedB !== undefined) {
             this.interaction.channel.send(`<@${this.playerB}> has solved ${this.problems[solvedB].name}, and get ${this.problems[solvedB].score} points!`);
             this.scoreB += this.problems[solvedB].score;
             this.problems.splice(solvedB, 1);
@@ -141,51 +146,42 @@ class duelSystem {
     }
 
     async checkSubmissionA() {
-        let handleA = await getData(this.playerA);
-        try {
-            const submission = await getUserSubmission(handleA,1);
-            const result = submission.result;
-
-            let solved = undefined;
-            let p = result[0];
-
-            for (let i = 0; i < this.problems.length; i++){
-                const problem = this.problems[i];
-                const {contestId,index} = problem;
-                if(p.verdict === 'OK' && p.contestId===contestId && p.problem.index === index && this.checkedSubmissions.get(p.id) == undefined) {
-                    this.checkedSubmissions.set(p.id, true);
-                    solved = i;
-                }
-            }
-
-            return solved;
-        } catch (e) {
-            console.log("There are some problem with checking submissions");
-            return undefined;
-        }
+        return this.checkSubmission(this.playerA);
     }
     
     async checkSubmissionB() {
-        let handleB = await getData(this.playerB);
+        return this.checkSubmission(this.playerB);
+    }
+
+    async checkSubmission(player) {
+        let handle = await getData(player);
         try {
-            const submission = await getUserSubmission(handleB,1);
+            const submission = await getUserSubmission(handle, 1);
             const result = submission.result;
 
-            let solved = undefined;
+            if (!result || result.length === 0) {
+                return undefined;
+            }
+
             let p = result[0];
 
             for (let i = 0; i < this.problems.length; i++){
                 const problem = this.problems[i];
-                const {contestId,index} = problem;
-                if(p.verdict === 'OK' && p.contestId===contestId && p.problem.index === index && this.checkedSubmissions.get(p.id) == undefined) {
+                const {contestId, index} = problem;
+                if (
+                    p.verdict === 'OK' && 
+                    p.contestId === contestId && 
+                    p.problem.index === index && 
+                    !this.checkedSubmissions.has(p.id)
+                ) {
                     this.checkedSubmissions.set(p.id, true);
-                    solved = i;
+                    return i;
                 }
             }
 
-            return solved;
+            return undefined;
         } catch (e) {
-            console.log("There are some problem with checking submissions");
+            console.error(`There is a problem checking submissions for ${handle}:`, e);
             return undefined;
         }
     }
