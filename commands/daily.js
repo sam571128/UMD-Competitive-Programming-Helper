@@ -1,6 +1,7 @@
 // discord-bot/commands/daily.js
 
-const { EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder  } = require('discord.js');
+
 const { getProblem } = require('./fetch/cfAPI.js');
 const { saveData, getData } = require('./database/data.js');
 const cron = require('node-cron');
