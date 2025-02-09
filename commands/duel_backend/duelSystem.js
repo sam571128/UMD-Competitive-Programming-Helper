@@ -86,24 +86,23 @@ class duelSystem {
         // Update the embed with current status (we will do this every second)
         this.time--;
         
-        if (this.time <= 0) {
+        if (this.time <= 0 || this.problems.length === 0) {
             clearInterval(this.timer);
             await this.checkWinner();
             return;
         }
         
-        if (this.time % 5 == 0) {
-            await this.checkSubmissions();
+        if (this.time % 5 === 0) {
+            try {
+                await this.checkSubmissions();
+            } catch (error) {
+                console.error("Error checking submissions:", error);
+                // Don't stop the duel on submission check error
+            }
         }
 
-        if(this.problems.length == 0){
-            clearInterval(this.timer);
-            await this.checkWinner();
-            return;
-        }
-
-        if (this.time % 5 == 0){
-            try{
+        if (this.time % 5 === 0) {
+            try {
                 let handleA = await getData(this.playerA);
                 let handleB = await getData(this.playerB);
 
@@ -119,8 +118,10 @@ class duelSystem {
                             { name: 'Time Left', value: `${Math.floor(this.time / 3600)} hours ${Math.floor((this.time % 3600) / 60)} minutes ${this.time % 60} seconds`}
                         );
                 await this.interaction.editReply({content: "", embeds: [statusEmbed]});
-            } catch (e) {
-                console.error("There is an issue updating status:", e);
+            } catch (error) {
+                console.error("Error updating status:", error);
+                // Try to recover by forcing end if we can't update status
+                await this.forceEnd("Error updating duel status. Please try again.");
             }
         }
     }
@@ -129,19 +130,31 @@ class duelSystem {
         // Check submissions of both players 
         let [solvedA, solvedB] = await Promise.all([this.checkSubmissionA(), this.checkSubmissionB()]);
         
-        if (solvedA !== undefined && solvedB !== undefined) {
-            this.interaction.channel.send(`Both player has solved ${this.problems[solvedA].name}, and get ${this.problems[solvedA].score} points!`);
-            this.scoreA += this.problems[solvedA].score;
-            this.scoreB += this.problems[solvedA].score;
+        // Handle the case where both players solved the same problem
+        if (solvedA !== undefined && solvedB !== undefined && solvedA === solvedB) {
+            const problem = this.problems[solvedA];
+            this.interaction.channel.send(`Both players have solved ${problem.name}, and get ${problem.score} points!`);
+            this.scoreA += problem.score;
+            this.scoreB += problem.score;
             this.problems.splice(solvedA, 1);
-        } else if (solvedA !== undefined) {
-            this.interaction.channel.send(`<@${this.playerA}> has solved ${this.problems[solvedA].name}, and get ${this.problems[solvedA].score} points!`);
-            this.scoreA += this.problems[solvedA].score;
-            this.problems.splice(solvedA, 1);
-        } else if (solvedB !== undefined) {
-            this.interaction.channel.send(`<@${this.playerB}> has solved ${this.problems[solvedB].name}, and get ${this.problems[solvedB].score} points!`);
-            this.scoreB += this.problems[solvedB].score;
-            this.problems.splice(solvedB, 1);
+        } else {
+            // Handle individual solves
+            if (solvedA !== undefined) {
+                const problem = this.problems[solvedA];
+                this.interaction.channel.send(`<@${this.playerA}> has solved ${problem.name}, and get ${problem.score} points!`);
+                this.scoreA += problem.score;
+                this.problems.splice(solvedA, 1);
+            }
+            if (solvedB !== undefined) {
+                // Adjust index if A already removed a problem
+                if (solvedA !== undefined && solvedB > solvedA) {
+                    solvedB--;
+                }
+                const problem = this.problems[solvedB];
+                this.interaction.channel.send(`<@${this.playerB}> has solved ${problem.name}, and get ${problem.score} points!`);
+                this.scoreB += problem.score;
+                this.problems.splice(solvedB, 1);
+            }
         }
     }
 
@@ -209,26 +222,33 @@ class duelSystem {
         await removeData(`IN DUEL_${this.playerB}`);
     }
 
-    async forceEnd() {
+    async forceEnd(reason = "The duel has been force ended") {
         // Force end the duel
-        
-        let handleA = await getData(this.playerA);
-        let handleB = await getData(this.playerB);
-        if (this.timer != undefined){
-            clearInterval(this.timer);
+        try {
+            if (this.timer !== undefined) {
+                clearInterval(this.timer);
+                this.timer = undefined;
+            }
+            
+            let handleA = await getData(this.playerA);
+            let handleB = await getData(this.playerB);
+            
+            const endEmbed = new EmbedBuilder()
+                    .setColor(0xFF0000)
+                    .setTitle(reason)
+                    .addFields(
+                        { name: `Score of ${handleA}`, value: `${this.scoreA}` },
+                        { name: `Score of ${handleB}`, value: `${this.scoreB}` },
+                        { name: 'Winner', value: (this.scoreA >= this.scoreB ? `<@${this.playerA}>` : `<@${this.playerB}>`) },
+                    );
+            await this.interaction.editReply({content: "", embeds: [endEmbed]});
+        } catch (error) {
+            console.error("Error during force end:", error);
+        } finally {
+            // Always try to clean up the database
+            await removeData(`IN DUEL_${this.playerA}`).catch(console.error);
+            await removeData(`IN DUEL_${this.playerB}`).catch(console.error);
         }
-        const endEmbed = new EmbedBuilder()
-                .setColor(0xFF0000)
-                .setTitle(`The duel has been force ended`)
-                .addFields(
-                    { name: `Score of ${handleA}`, value: `${this.scoreA}` },
-                    { name: `Score of ${handleB}`, value: `${this.scoreB}` },
-                    { name: 'Winner', value: (this.scoreA >= this.scoreB ? `<@${this.playerA}>` : `<@${this.playerB}>`) },
-                );
-        await this.interaction.editReply({content: "", embeds: [endEmbed]});
-
-        await removeData(`IN DUEL_${this.playerA}`);
-        await removeData(`IN DUEL_${this.playerB}`);
     }
     
 }
