@@ -3,7 +3,7 @@
 const { SlashCommandBuilder, EmbedBuilder  } = require('discord.js');
 
 const { getProblem } = require('./fetch/cfAPI.js');
-const { saveData, getData } = require('./database/data.js');
+const { saveData, getData, removeData } = require('./database/data.js');
 const cron = require('node-cron');
 require('dotenv').config();
 
@@ -13,9 +13,47 @@ async function sendDailyProblems(client, message) {
     
     // Check if we already have problems for today
     const dailyProblems = await getData(`daily_problems_${today}`);
+    console.log(dailyProblems);
     if (dailyProblems) {
-        // If we have problems, send them without fetching new ones
-        const { easyProblemEmbed, mediumProblemEmbed, hardProblemEmbed } = dailyProblems;
+        // If we have problems, create new embeds from the stored data
+        const { easy, medium, hard } = dailyProblems;
+        
+        const easyProblemEmbed = new EmbedBuilder()
+            .setColor(0x00FF55)
+            .setThumbnail('https://sta.codeforces.com/s/76530/images/codeforces-telegram-square.png')
+            .setTitle("Easy Problem: " + easy.name)
+            .addFields(
+                { name: 'From', value: `${easy.contestId}${easy.index}` },
+                { name: 'Tags', value: `||${easy.tags.join(', ')}||` },
+                { name: 'Difficulty', value: `||${easy.rating}||` },
+            )
+            .setURL(`http://codeforces.com/contest/${easy.contestId}/problem/${easy.index}`)
+            .setFooter({ text: `Daily Easy Problem | ${today}` });
+
+        const mediumProblemEmbed = new EmbedBuilder()
+            .setColor(0xFFDD00)
+            .setThumbnail('https://sta.codeforces.com/s/76530/images/codeforces-telegram-square.png')
+            .setTitle("Medium Problem: " + medium.name)
+            .addFields(
+                { name: 'From', value: `${medium.contestId}${medium.index}` },
+                { name: 'Tags', value: `||${medium.tags.join(', ')}||` },
+                { name: 'Difficulty', value: `||${medium.rating}||` },
+            )
+            .setURL(`http://codeforces.com/contest/${medium.contestId}/problem/${medium.index}`)
+            .setFooter({ text: `Daily Medium Problem | ${today}` });
+
+        const hardProblemEmbed = new EmbedBuilder()
+            .setColor(0xFF0033)
+            .setThumbnail('https://sta.codeforces.com/s/76530/images/codeforces-telegram-square.png')
+            .setTitle("Hard Problem: " + hard.name)
+            .addFields(
+                { name: 'From', value: `${hard.contestId}${hard.index}` },
+                { name: 'Tags', value: `||${hard.tags.join(', ')}||` },
+                { name: 'Difficulty', value: `||${hard.rating}||` },
+            )
+            .setURL(`http://codeforces.com/contest/${hard.contestId}/problem/${hard.index}`)
+            .setFooter({ text: `Daily Hard Problem | ${today}` });
+
         const todayDate = `Today's Date: ${today}`;
         if (message) {
             message.channel.send(todayDate);
@@ -78,7 +116,35 @@ async function sendDailyProblems(client, message) {
         const hardProblem = hardProblems[hardListIndex];
         const { name: hardName, contestId: hardContestId, index: hardIndex, tags: hardProblemTags, rating: hardRating } = hardProblem;
 
-        // Create an embed message
+        // Store only the essential problem data
+        const problemData = {
+            easy: {
+                name: easyName,
+                contestId: easyContestId,
+                index: easyIndex,
+                tags: easyProblemTags,
+                rating: easyRating
+            },
+            medium: {
+                name: mediumName,
+                contestId: mediumContestId,
+                index: mediumIndex,
+                tags: mediumProblemTags,
+                rating: mediumRating
+            },
+            hard: {
+                name: hardName,
+                contestId: hardContestId,
+                index: hardIndex,
+                tags: hardProblemTags,
+                rating: hardRating
+            }
+        };
+
+        // Save the problem data
+        await saveData(`daily_problems_${today}`, problemData);
+
+        // Create embeds from the data
         const easyProblemEmbed = new EmbedBuilder()
             .setColor(0x00FF55)
             .setThumbnail('https://sta.codeforces.com/s/76530/images/codeforces-telegram-square.png')
@@ -114,13 +180,6 @@ async function sendDailyProblems(client, message) {
             )
             .setURL(`http://codeforces.com/contest/${hardContestId}/problem/${hardIndex}`)
             .setFooter({ text: `Daily Hard Problem | ${today}` });
-
-        // Store the problems in the database
-        await saveData(`daily_problems_${today}`, {
-            easyProblemEmbed,
-            mediumProblemEmbed,
-            hardProblemEmbed
-        });
 
         const todayDate = `Today's Date: ${today}`;
         if (message) {
