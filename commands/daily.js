@@ -8,10 +8,31 @@ const cron = require('node-cron');
 require('dotenv').config();
 
 // Function to send daily problems. If 'message' is provided, it sends to that channel (command triggered). Otherwise, it sends to the default daily channel (cron trigger).
-function sendDailyProblems(client, message) {
-    // Fetch a random problem without any specific tags
+async function sendDailyProblems(client, message) {
+    const today = new Date().toLocaleDateString();
+    
+    // Check if we already have problems for today
+    const dailyProblems = await getData(`daily_problems_${today}`);
+    if (dailyProblems) {
+        // If we have problems, send them without fetching new ones
+        const { easyProblemEmbed, mediumProblemEmbed, hardProblemEmbed } = dailyProblems;
+        const todayDate = `Today's Date: ${today}`;
+        if (message) {
+            message.channel.send(todayDate);
+            message.channel.send({ embeds: [easyProblemEmbed, mediumProblemEmbed, hardProblemEmbed] });
+        } else {
+            const channel = client.channels.cache.get(process.env.DAILY_CHANNEL_ID);
+            if (channel) {
+                channel.send(todayDate);
+                channel.send({ embeds: [easyProblemEmbed, mediumProblemEmbed, hardProblemEmbed] });
+            }
+        }
+        return;
+    }
+
+    // If no problems exist for today, fetch new ones
     const tags = [];
-    getProblem(tags).then(body => {
+    getProblem(tags).then(async body => {
         const problems = body.result.problems;
 
         if (!problems.length) {
@@ -68,7 +89,7 @@ function sendDailyProblems(client, message) {
                 { name: 'Difficulty', value: `||${easyRating}||` },
             )
             .setURL(`http://codeforces.com/contest/${easyContestId}/problem/${easyIndex}`)
-            .setFooter({ text: `Daily Easy Problem | ${new Date().toLocaleDateString()}` });
+            .setFooter({ text: `Daily Easy Problem | ${today}` });
 
         const mediumProblemEmbed = new EmbedBuilder()
             .setColor(0xFFDD00)
@@ -80,7 +101,7 @@ function sendDailyProblems(client, message) {
                 { name: 'Difficulty', value: `||${mediumRating}||` },
             )
             .setURL(`http://codeforces.com/contest/${mediumContestId}/problem/${mediumIndex}`)
-            .setFooter({ text: `Daily Medium Problem | ${new Date().toLocaleDateString()}` });
+            .setFooter({ text: `Daily Medium Problem | ${today}` });
 
         const hardProblemEmbed = new EmbedBuilder()
             .setColor(0xFF0033)
@@ -92,17 +113,24 @@ function sendDailyProblems(client, message) {
                 { name: 'Difficulty', value: `||${hardRating}||` },
             )
             .setURL(`http://codeforces.com/contest/${hardContestId}/problem/${hardIndex}`)
-            .setFooter({ text: `Daily Hard Problem | ${new Date().toLocaleDateString()}` });
+            .setFooter({ text: `Daily Hard Problem | ${today}` });
 
-        const todayDate = `Today's Date: ${new Date().toLocaleDateString()}`;
+        // Store the problems in the database
+        await saveData(`daily_problems_${today}`, {
+            easyProblemEmbed,
+            mediumProblemEmbed,
+            hardProblemEmbed
+        });
+
+        const todayDate = `Today's Date: ${today}`;
         if (message) {
             message.channel.send(todayDate);
             message.channel.send({ embeds: [easyProblemEmbed, mediumProblemEmbed, hardProblemEmbed] });
         } else {
-            const dailyChannel = client.channels.cache.get(process.env.DAILY_CHANNEL_ID);
-            if (dailyChannel) {
-                dailyChannel.send(todayDate);
-                dailyChannel.send({ embeds: [easyProblemEmbed, mediumProblemEmbed, hardProblemEmbed] });
+            const channel = client.channels.cache.get(process.env.DAILY_CHANNEL_ID);
+            if (channel) {
+                channel.send(todayDate);
+                channel.send({ embeds: [easyProblemEmbed, mediumProblemEmbed, hardProblemEmbed] });
             } else {
                 console.error('Daily channel not found. Please check DAILY_CHANNEL_ID environment variable.');
             }
@@ -118,14 +146,14 @@ module.exports = {
         .setDescription('Sends daily problems'),
 
     initialize(client) {
-        // Schedule the task to run every day at a specific time (e.g., 09:00 AM)
-        cron.schedule('0 9 * * *', () => { // Runs at 09:00 AM server time
+        // Schedule the task to run every day at 9:00 AM New York time
+        cron.schedule('0 9 * * *', () => {
             sendDailyProblems(client, null);
         }, {
-            timezone: "UTC" // Replace with your timezone, e.g., "Asia/Taipei"
+            timezone: "America/New_York"
         });
 
-        console.log('Daily problem scheduler initialized.');
+        console.log('Daily problem scheduler initialized (9:00 AM EST/EDT).');
     },
 
     async execute(interaction) {
