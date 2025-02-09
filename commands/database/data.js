@@ -1,6 +1,6 @@
 require('dotenv').config();
 const Keyv = require('@keyv/mongo');
-const keyv = new Keyv(`${process.env.MONGODB_URI}`);
+const keyv = new Keyv(`mongodb+srv://samlee571128:${process.env.MONGODB_PASS}@cluster0.w1sltzk.mongodb.net/?retryWrites=true&w=majority`);
 
 keyv.on('error', err=> console.error('Keyv connection error:', err));
 
