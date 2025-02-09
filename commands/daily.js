@@ -203,7 +203,6 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('daily')
         .setDescription('Sends daily problems'),
-
     initialize(client) {
         // Schedule the task to run every day at 9:00 AM New York time
         cron.schedule('0 9 * * *', () => {
@@ -221,5 +220,6 @@ module.exports = {
             return interaction.reply('You do not have permission to run this command.');
         }
         sendDailyProblems(interaction.client, interaction);
-    }
+    },
+    sendDailyProblems
 };
