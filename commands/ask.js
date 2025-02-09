@@ -1,9 +1,9 @@
 require('dotenv').config()
 const { Configuration, OpenAIApi } = require("openai");
-const configuration = new Configuration({
-    apiKey: process.env.OPENAI_API_KEY,
+const openai = new OpenAIApi({
+    baseURL: 'https://api.deepseek.com',
+    apiKey: process.env.DEEPSEEK_API_KEY
 });
-const openai = new OpenAIApi(configuration);
 
 const { SlashCommandBuilder, EmbedBuilder  } = require('discord.js');
 
@@ -28,28 +28,29 @@ module.exports = {
 			return;
         }
 
-        const messages = [];
+        const messages = [
+            {
+                role: 'system',
+                content: 'You are an AI assistant specialized in competitive programming in the University of Maryland Competitive Programming Club Discord server, provide concise answers to the members of the server.'
+            },
+            {
+                role: 'user',
+                content: question
+            }
+        ];
 
-        messages.push({role: "user", content: "You are a Discord bot assistant for Competitive Programming, your job is to answer the questions."});
-        
-        const completion1 = await openai.createChatCompletion({
-            model: "gpt-3.5-turbo",
-            messages: messages,
-          });
+        try {
+            const completion = await openai.chat.completions.create({
+                model: 'deepseek-chat',
+                messages: messages,
+            });
 
-        const completion_text1 = completion1.data.choices[0].message.content;
+            const completion_text = completion.data.choices[0].message.content;
 
-        messages.push({role: "assistant", content: completion_text1});
-
-        messages.push({role: "user", content: question});
-        
-		const completion = await openai.createChatCompletion({
-            model: "gpt-3.5-turbo",
-            messages: messages,
-          });
-
-        const completion_text = completion.data.choices[0].message.content;
-
-        await interaction.editReply(completion_text);
+            await interaction.editReply(completion_text);
+        } catch (error) {
+            console.error(error);
+            await interaction.editReply('Failed to generate response.');
+        }
     },
 }
