@@ -209,6 +209,10 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('cf_calendar')
         .setDescription('Shows your Codeforces solved problems in a calendar view')
+        .addStringOption(option =>
+            option.setName('handle')
+                .setDescription('Codeforces handle to look up (defaults to your registered handle)')
+                .setRequired(false))
         .addIntegerOption(option =>
             option.setName('year')
                 .setDescription('Year to show (defaults to current year)')
@@ -226,11 +230,14 @@ module.exports = {
         try {
             await interaction.deferReply();
             
-            const discordId = interaction.user.id;
-            const handle = await getData(`${discordId}`);
-            
+            let handle = interaction.options.getString('handle');
             if (!handle) {
-                return interaction.editReply('Please register your Codeforces handle first using /cf_reg');
+                const discordId = interaction.user.id;
+                handle = await getData(`${discordId}`);
+                
+                if (!handle) {
+                    return interaction.editReply('Please register your Codeforces handle first using /cf_reg or provide a handle to look up');
+                }
             }
 
             const now = new Date();
@@ -248,10 +255,17 @@ module.exports = {
                 });
             } catch (error) {
                 console.error('Error fetching Codeforces data:', error);
-                await interaction.editReply({
-                    content: 'Failed to fetch Codeforces submissions. Please try again later.',
-                    components: []
-                });
+                if (error.message?.includes('Failed to fetch submissions')) {
+                    await interaction.editReply({
+                        content: `Failed to fetch submissions. Please verify that the handle "${handle}" exists on Codeforces.`,
+                        components: []
+                    });
+                } else {
+                    await interaction.editReply({
+                        content: 'Failed to fetch Codeforces submissions. Please try again later.',
+                        components: []
+                    });
+                }
             }
         } catch (error) {
             console.error('Error executing command:', error);
@@ -278,12 +292,13 @@ module.exports = {
             // Defer the update immediately
             await interaction.deferUpdate();
 
-            const discordId = interaction.user.id;
-            const handle = await getData(`${discordId}`);
+            // Get the handle from the embed title, removing the trophy emoji if present
+            const embedTitle = interaction.message.embeds[0].title;
+            const handle = embedTitle.split("'s")[0].replace('🏆 ', '');
             
             if (!handle) {
                 return interaction.editReply({ 
-                    content: 'Please register your Codeforces handle first using /cf_reg',
+                    content: 'Could not determine the Codeforces handle. Please try the command again.',
                     ephemeral: true 
                 });
             }
@@ -309,15 +324,20 @@ module.exports = {
                 });
             } catch (error) {
                 console.error('Error fetching Codeforces data:', error);
-                await interaction.editReply({
-                    content: 'Failed to fetch Codeforces submissions. Please try again later.',
-                    components: interaction.message.components
-                });
+                if (error.message?.includes('Failed to fetch submissions')) {
+                    await interaction.editReply({
+                        content: `Failed to fetch submissions. Please verify that the handle "${handle}" exists on Codeforces.`,
+                        components: interaction.message.components
+                    });
+                } else {
+                    await interaction.editReply({
+                        content: 'Failed to fetch Codeforces submissions. Please try again later.',
+                        components: interaction.message.components
+                    });
+                }
             }
         } catch (error) {
             console.error('Error handling interaction:', error);
-            // If we can't defer the update, the interaction might have expired
-            // Try to send a new message instead
             try {
                 await interaction.followUp({
                     content: 'There was an error processing your request. Please try the command again.',
