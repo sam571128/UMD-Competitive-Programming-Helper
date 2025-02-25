@@ -1,8 +1,8 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder  } = require('discord.js');
 
-const { getProblem, getUser, getUserSubmission } = require('./fetch/cfAPI.js');
+const { getProblem, getUser, getUserSubmission } = require('../services/codeforces.js');
 
-const { saveData, getData, removeData } = require('./database/data.js');
+const { saveData, getData, removeData } = require('../services/database.js');
 
 const { allDuels } = require('./duel.js');
 

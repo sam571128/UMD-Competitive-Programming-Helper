@@ -6,8 +6,8 @@ const {
     ButtonBuilder,
     ButtonStyle
 } = require('discord.js');
-const { getUserSubmission } = require('./fetch/cfAPI.js');
-const { getData } = require('./database/data.js');
+const { getUserSubmission } = require('../services/codeforces.js');
+const { getData } = require('../services/database.js');
 
 function getDaysInMonth(year, month) {
     return new Date(year, month + 1, 0).getDate();

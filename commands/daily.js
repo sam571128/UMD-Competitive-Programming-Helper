@@ -2,8 +2,8 @@
 
 const { SlashCommandBuilder, EmbedBuilder  } = require('discord.js');
 
-const { getProblem } = require('./fetch/cfAPI.js');
-const { saveData, getData, removeData } = require('./database/data.js');
+const { getProblem } = require('../services/codeforces.js');
+const { saveData, getData, removeData } = require('../services/database.js');
 const cron = require('node-cron');
 require('dotenv').config();
 

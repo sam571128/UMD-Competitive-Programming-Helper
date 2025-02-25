@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { getData } = require('./database/data.js');
+const { getData } = require('../services/database.js');
 
 function getAchievementBadge(total) {
     if (total >= 100) return '🏆'; // Trophy for 100+ problems

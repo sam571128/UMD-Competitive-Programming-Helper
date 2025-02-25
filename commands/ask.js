@@ -1,70 +1,57 @@
-require('dotenv').config()
-const OpenAI = require("openai");
-const openai = new OpenAI({
-    apiKey: process.env.DEEPSEEK_API_KEY,
-    baseURL: 'https://api.deepseek.com/v1'
-});
-
-const { SlashCommandBuilder, EmbedBuilder  } = require('discord.js');
-
-const wait = require('node:timers/promises').setTimeout;
+require('dotenv').config();
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const aiService = require('../services/ai');
+const { handleCommandError } = require('../utils/errorHandler');
 
 module.exports = {
-    data : new SlashCommandBuilder()
-         .setName('ask')
-         .setDescription('Chat with the bot')
-         .addStringOption(option =>
-			option
-				.setName('question')
-				.setDescription('Ask a question')
-                .setRequired(true)),
-          
-    async execute(interaction) {
-        await interaction.deferReply();   
-        const question = interaction.options.getString('question') ?? " ";
-
-        if (question == " "){
-			await interaction.editReply('Please ask a question!')
-			return;
-        }
-
-        const messages = [];
-
-        messages.push({
-            role: "system", 
-            content: `You are a knowledgeable competitive programming assistant for the UMD Competitive Programming Club. Your expertise includes:
-            - Algorithms and data structures
-            - Problem-solving strategies and techniques
-            - Time and space complexity analysis
-            - Programming contest tips and best practices
-            - Solutions to common competitive programming problems
-            
-            You should:
-            - Provide clear, concise explanations with example code when relevant
-            - Help debug algorithmic issues
-            - Suggest optimal approaches to problems
-            - Reference specific algorithms or data structures when applicable
-            - Encourage learning and understanding rather than just giving solutions
-            
-            You should not:
-            - Provide direct solutions to active contest problems
-            - Give vague or overly theoretical answers
-            - Ignore time/space complexity considerations
-            
-            Always strive to help members improve their problem-solving skills.`
-        });
+  data: new SlashCommandBuilder()
+    .setName('ask')
+    .setDescription('Chat with the AI assistant about competitive programming')
+    .addStringOption(option =>
+      option
+        .setName('question')
+        .setDescription('Your question about competitive programming, algorithms, or coding')
+        .setRequired(true))
+    .addBooleanOption(option =>
+      option
+        .setName('private')
+        .setDescription('Make the response visible only to you (default: false)')
+        .setRequired(false)),
+    
+  async execute(interaction) {
+    try {
+      await interaction.deferReply({
+        ephemeral: interaction.options.getBoolean('private') || false
+      });
+      
+      const question = interaction.options.getString('question');
+      
+      if (!question || question.trim().length === 0) {
+        return interaction.editReply('Please ask a question!');
+      }
+      
+      // Get system prompt for competitive programming
+      const systemPrompt = aiService.getCompetitiveProgrammingPrompt();
+      
+      // Get response from AI service
+      const response = await aiService.getResponse(question, systemPrompt);
+      
+      // Check response length - Discord has a 2000 character limit
+      if (response.length > 2000) {
+        // Create embedded response for long text
+        const embed = new EmbedBuilder()
+          .setColor(0x0099FF)
+          .setTitle('Response to your question')
+          .setDescription(response.substring(0, 4000)) // Embed supports longer text
+          .setTimestamp();
         
-        messages.push({role: "user", content: question});
-        
-        const completion = await openai.chat.completions.create({
-            model: "deepseek-chat",
-            messages: messages,
-            temperature: 0.7,
-            max_tokens: 2000
-        });
-
-        const completion_text = completion.choices[0].message.content;
-
-        await interaction.editReply(completion_text);
-    },
-}
+        await interaction.editReply({ embeds: [embed] });
+      } else {
+        // Send direct message for shorter text
+        await interaction.editReply(response);
+      }
+    } catch (error) {
+      await handleCommandError(error, interaction);
+    }
+  },
+};

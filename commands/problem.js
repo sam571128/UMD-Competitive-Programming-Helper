@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder  } = require('discord.js');
 
-const { getProblem } = require('./fetch/cfAPI.js');
+const { getProblem } = require('../services/codeforces.js');
 
 const wait = require('node:timers/promises').setTimeout;
 

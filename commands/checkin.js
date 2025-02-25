@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { saveData, getData, removeData } = require('./database/data.js');
+const { saveData, getData, removeData } = require('../services/database.js');
 const { sendDailyProblems } = require('./daily.js');
 
 module.exports = {
