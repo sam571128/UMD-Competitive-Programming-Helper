@@ -2,70 +2,24 @@
 
 const { SlashCommandBuilder, EmbedBuilder  } = require('discord.js');
 
-const { getProblem } = require('../services/codeforces.js');
+const { getProblem, getUserSubmission } = require('../services/codeforces.js');
 const { saveData, getData, removeData } = require('../services/database.js');
 const cron = require('node-cron');
 require('dotenv').config();
 
-// Function to send daily problems. If 'message' is provided, it sends to that channel (command triggered). Otherwise, it sends to the default daily channel (cron trigger).
-async function sendDailyProblems(client, message) {
+const easy_hist_key = 'EASY_DLB_HIST', 
+      medium_hist_key = 'MED_DLB_HIST', 
+      hard_hist_key = 'HARD_DLB_HIST',
+      all_hist_key = 'ALL_DLB_HIST';
+
+async function generateDailyProblems() {
     const today = new Date().toLocaleDateString();
-    
+
     // Check if we already have problems for today
     const dailyProblems = await getData(`daily_problems_${today}`);
     console.log(dailyProblems);
     if (dailyProblems) {
-        // If we have problems, create new embeds from the stored data
-        const { easy, medium, hard } = dailyProblems;
-        
-        const easyProblemEmbed = new EmbedBuilder()
-            .setColor(0x00FF55)
-            .setThumbnail('https://sta.codeforces.com/s/76530/images/codeforces-telegram-square.png')
-            .setTitle("Easy Problem: " + easy.name)
-            .addFields(
-                { name: 'From', value: `${easy.contestId}${easy.index}` },
-                { name: 'Tags', value: `||${easy.tags.join(', ')}||` },
-                { name: 'Difficulty', value: `||${easy.rating}||` },
-            )
-            .setURL(`http://codeforces.com/contest/${easy.contestId}/problem/${easy.index}`)
-            .setFooter({ text: `Daily Easy Problem | ${today}` });
-
-        const mediumProblemEmbed = new EmbedBuilder()
-            .setColor(0xFFDD00)
-            .setThumbnail('https://sta.codeforces.com/s/76530/images/codeforces-telegram-square.png')
-            .setTitle("Medium Problem: " + medium.name)
-            .addFields(
-                { name: 'From', value: `${medium.contestId}${medium.index}` },
-                { name: 'Tags', value: `||${medium.tags.join(', ')}||` },
-                { name: 'Difficulty', value: `||${medium.rating}||` },
-            )
-            .setURL(`http://codeforces.com/contest/${medium.contestId}/problem/${medium.index}`)
-            .setFooter({ text: `Daily Medium Problem | ${today}` });
-
-        const hardProblemEmbed = new EmbedBuilder()
-            .setColor(0xFF0033)
-            .setThumbnail('https://sta.codeforces.com/s/76530/images/codeforces-telegram-square.png')
-            .setTitle("Hard Problem: " + hard.name)
-            .addFields(
-                { name: 'From', value: `${hard.contestId}${hard.index}` },
-                { name: 'Tags', value: `||${hard.tags.join(', ')}||` },
-                { name: 'Difficulty', value: `||${hard.rating}||` },
-            )
-            .setURL(`http://codeforces.com/contest/${hard.contestId}/problem/${hard.index}`)
-            .setFooter({ text: `Daily Hard Problem | ${today}` });
-
-        const todayDate = `Today's Date: ${today}`;
-        if (message) {
-            message.channel.send(todayDate);
-            message.channel.send({ embeds: [easyProblemEmbed, mediumProblemEmbed, hardProblemEmbed] });
-        } else {
-            const channel = client.channels.cache.get(process.env.DAILY_CHANNEL_ID);
-            if (channel) {
-                channel.send(todayDate);
-                channel.send({ embeds: [easyProblemEmbed, mediumProblemEmbed, hardProblemEmbed] });
-            }
-        }
-        return;
+        return dailyProblems;
     }
 
     // If no problems exist for today, fetch new ones
@@ -77,7 +31,8 @@ async function sendDailyProblems(client, message) {
             console.error('No problems found.');
             return;
         }
-
+        
+        // TODO: Refactor from here down to reuse code
         // Filter problems with valid ratings and non-special tags
         const filteredProblems = problems.filter(problem => (
             problem.rating != null &&
@@ -144,59 +99,170 @@ async function sendDailyProblems(client, message) {
         // Save the problem data
         await saveData(`daily_problems_${today}`, problemData);
 
-        // Create embeds from the data
-        const easyProblemEmbed = new EmbedBuilder()
-            .setColor(0x00FF55)
-            .setThumbnail('https://sta.codeforces.com/s/76530/images/codeforces-telegram-square.png')
-            .setTitle("Easy Problem: " + easyName)
-            .addFields(
-                { name: 'From', value: `${easyContestId}${easyIndex}` },
-                { name: 'Tags', value: `||${easyProblemTags.join(', ')}||` },
-                { name: 'Difficulty', value: `||${easyRating}||` },
-            )
-            .setURL(`http://codeforces.com/contest/${easyContestId}/problem/${easyIndex}`)
-            .setFooter({ text: `Daily Easy Problem | ${today}` });
+        // Update problem lists for leaderboard
+        const easy_list = await getData(easy_hist_key);
+        saveData(easy_hist_key, [...easy_list, problemData.easy])
+        const medium_list = await getData(medium_hist_key);
+        saveData(medium_hist_key, [...medium_list, problemData.medium])
+        const hard_list = await getData(hard_hist_key);
+        saveData(hard_hist_key, [...hard_list, problemData.hard])
+        const all_list = await getData(all_hist_key);
+        saveData(all_hist_key, [...all_list, problemData.easy, problemData.medium, problemData.hard])
 
-        const mediumProblemEmbed = new EmbedBuilder()
-            .setColor(0xFFDD00)
-            .setThumbnail('https://sta.codeforces.com/s/76530/images/codeforces-telegram-square.png')
-            .setTitle("Medium Problem: " + mediumName)
-            .addFields(
-                { name: 'From', value: `${mediumContestId}${mediumIndex}` },
-                { name: 'Tags', value: `||${mediumProblemTags.join(', ')}||` },
-                { name: 'Difficulty', value: `||${mediumRating}||` },
-            )
-            .setURL(`http://codeforces.com/contest/${mediumContestId}/problem/${mediumIndex}`)
-            .setFooter({ text: `Daily Medium Problem | ${today}` });
+        return problemData;
+    }).catch(error => {
+        console.error('Error fetching creating daily problem:', error);
+    });
+}
 
-        const hardProblemEmbed = new EmbedBuilder()
-            .setColor(0xFF0033)
-            .setThumbnail('https://sta.codeforces.com/s/76530/images/codeforces-telegram-square.png')
-            .setTitle("Hard Problem: " + hardName)
-            .addFields(
-                { name: 'From', value: `${hardContestId}${hardIndex}` },
-                { name: 'Tags', value: `||${hardProblemTags.join(', ')}||` },
-                { name: 'Difficulty', value: `||${hardRating}||` },
-            )
-            .setURL(`http://codeforces.com/contest/${hardContestId}/problem/${hardIndex}`)
-            .setFooter({ text: `Daily Hard Problem | ${today}` });
 
-        const todayDate = `Today's Date: ${today}`;
-        if (message) {
-            message.channel.send(todayDate);
-            message.channel.send({ embeds: [easyProblemEmbed, mediumProblemEmbed, hardProblemEmbed] });
-        } else {
-            const channel = client.channels.cache.get(process.env.DAILY_CHANNEL_ID);
-            if (channel) {
-                channel.send(todayDate);
-                channel.send({ embeds: [easyProblemEmbed, mediumProblemEmbed, hardProblemEmbed] });
-            } else {
-                console.error('Daily channel not found. Please check DAILY_CHANNEL_ID environment variable.');
+async function makeProblemEmbed(data, color, title_prefix) {
+    const today = new Date().toLocaleDateString();
+    const problemEmbed = new EmbedBuilder()
+        .setColor(color)
+        .setThumbnail('https://sta.codeforces.com/s/76530/images/codeforces-telegram-square.png')
+        .setTitle(`${title_prefix}: ${data.name}`)
+        .addFields(
+            { name: 'From', value: `${data.contestId}${data.index}` },
+            { name: 'Tags', value: `||${data.tags.join(', ')}||` },
+            { name: 'Difficulty', value: `||${data.rating}||` },
+        )
+        .setURL(`http://codeforces.com/contest/${data.contestId}/problem/${data.index}`)
+        .setFooter({ text: `${title_prefix} | ${today}` });
+
+    return problemEmbed
+}
+
+
+async function sendDailyProblemMessage(dailyProblems, channel) {
+    if (!channel) {
+        console.error('Cannot send daily problem message: No channel provided.');
+        return;
+    }
+    if (!dailyProblems) {
+        console.error('Cannot send daily problem message: No Daily Problems provided.');
+        return;
+    }
+
+    const today = new Date().toLocaleDateString();
+    const todayDate = `Today's Date: ${today}`;
+
+    // If we have problems, create new embeds from the stored data
+    const { easy, medium, hard } = dailyProblems;
+        
+    const easyProblemEmbed = await makeProblemEmbed(easy, 0x00FF55, "Easy Problem");
+    const mediumProblemEmbed = await makeProblemEmbed(medium, 0xFFDD00, "Medium Problem");
+    const hardProblemEmbed = await makeProblemEmbed(hard, 0xFF0033, "Hard Problem");
+
+    channel.send(todayDate);
+    channel.send({ embeds: [easyProblemEmbed, mediumProblemEmbed, hardProblemEmbed] });
+}
+
+
+async function getSubmissions(handle) {
+    try {
+        const response = await getUserSubmission(handle);
+        if (response.status === 'OK') {
+            return response.result;
+        }
+        throw new Error('Failed to fetch submissions');
+    } catch (error) {
+        console.error('Error fetching submissions:', error);
+        throw error;
+    }
+}
+
+
+async function getDailyLeaderboard(problems_db_key) {
+    const problems = await getData(problems_db_key);
+    const prob_set = Set();
+    for (const problem of problems) {
+        const prob_key = problem.contestId + problem.index;
+        prob_set.add(prob_key);
+    }
+    const users = await getData('DAILY_LB_USERS');
+
+    const data = []
+    for (const user of users) {
+        const handle = await getData(user);
+        const submissions = await getSubmissions(handle);
+        let count = 0;
+        const solved = Set();
+        for (sub of submissions) {
+            if (sub.verdict != 'OK') continue;
+            const contestId = sub.problem.contestId;
+            const index = sub.problem.index;
+            const prob_key = contestId + index;
+            if (prob_set.has(prob_key) && !solved.has(prob_key)) {
+                solved.add(prob_key);
+                count++;
             }
         }
-    }).catch(error => {
-        console.error('Error fetching or sending daily problem:', error);
-    });
+
+        data.push((count, user));
+    }
+
+    const top_5 = [];
+    data.sort().reverse();
+    let prev = -1;
+    for (const [count, user] of data) {
+        const username = await getData('DLBU_UNAME_' + user)
+        if (count == prev) {
+            top_5.at(-1).name += ' & ' + username;
+            continue;
+        }
+        if (top_5.length() >= 5) break;
+        const lb_obj = {name: username, score: count};
+        top_5.push(lb_obj);
+        prev = count;
+    }
+
+    return top_5;
+}
+
+async function makeLeaderboardEmbed(db_key, color, lb_name) {
+    const top_5 = await getDailyLeaderboard(db_key);
+    const desc = "";
+    for (const entry of top_5) {
+        desc += `${entry.score}: ${entry.name}\n`;
+    }
+    const embed = new EmbedBuilder()
+        .setColor(color)
+        .setTitle(`${lb_name} Leaderboard`)
+        .setDescription(desc)
+    return embed
+}
+
+async function sendDailyLeaderboardMessage(channel) {
+    if (!channel) {
+        console.error('Cannot send daily problem leaderboard message: No channel provided.');
+        return;
+    }
+
+    const easyLbEmbed = await makeLeaderboardEmbed(easy_hist_key, 0x00FF55, 'Easy Problem');
+    const mediumLbEmbed = await makeLeaderboardEmbed(medium_hist_key, 0xFFDD00, 'Medium Problem');
+    const hardLbEmbed = await makeLeaderboardEmbed(hard_hist_key, 0xFF0033, 'Hard Problem');
+    const allLbEmbed = await makeLeaderboardEmbed(all_hist_key, 0xFFFFFF, 'Overall');
+
+    channel.send({ embeds: [easyLbEmbed, mediumLbEmbed, hardLbEmbed, allLbEmbed] });
+}
+
+
+// Function to send daily problems. If 'message' is provided, it sends to that channel (command triggered). Otherwise, it sends to the default daily channel (cron trigger).
+async function sendDailyProblems(client, message) {
+
+    const channel = message ? message.channel : client.channels.cache.get(process.env.DAILY_CHANNEL_ID);
+    const dailyProblems = await generateDailyProblems();
+
+    if (!channel) {
+        console.error('Daily channel not found. Please check DAILY_CHANNEL_ID environment variable.');
+    }
+    if (!dailyProblems) {
+        console.error('Daily problems not found: error fetching or creating daily problems.');
+    }
+
+    sendDailyLeaderboardMessage(channel)
+    sendDailyProblemMessage(dailyProblems, channel);
 }
 
 module.exports = {
@@ -221,5 +287,6 @@ module.exports = {
         }
         sendDailyProblems(interaction.client, interaction);
     },
-    sendDailyProblems
+    sendDailyProblems,
+    sendDailyLeaderboardMessage
 };

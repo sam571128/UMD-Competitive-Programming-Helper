@@ -68,6 +68,8 @@ A Discord bot to assist members of the University of Maryland Competitive Progra
 - `/cf_calendar <handle> <year> <month>`: View your solved problems calendar
 - `/problem <tag1> <tag2> <tag3> <min_rating> <max_rating>`: Get a problem recommendation
 - `/daily`: Get daily problems (admin only)
+- `/daily_lb_reg`: Register for the daily problem leaderboard (use `/cf_reg` first)
+- `/daily_lb`: Print the daily problem leaderboard
 - `/checkin <difficulty>`: Check in your daily problem-solving progress
 
 ### Duel Commands
