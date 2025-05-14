@@ -175,7 +175,7 @@ async function getSubmissions(handle) {
 
 async function getDailyLeaderboard(problems_db_key) {
     const problems = await getData(problems_db_key);
-    const prob_set = Set();
+    const prob_set = new Set();
     for (const problem of problems) {
         const prob_key = problem.contestId + problem.index;
         prob_set.add(prob_key);
@@ -187,7 +187,7 @@ async function getDailyLeaderboard(problems_db_key) {
         const handle = await getData(user);
         const submissions = await getSubmissions(handle);
         let count = 0;
-        const solved = Set();
+        const solved = new Set();
         for (sub of submissions) {
             if (sub.verdict != 'OK') continue;
             const contestId = sub.problem.contestId;
@@ -199,11 +199,11 @@ async function getDailyLeaderboard(problems_db_key) {
             }
         }
 
-        data.push((count, user));
+        data.push([count, user]);
     }
 
     const top_5 = [];
-    data.sort().reverse();
+    data.sort((a, b) => b[0] - a[0]);
     let prev = -1;
     for (const [count, user] of data) {
         const username = await getData('DLBU_UNAME_' + user)
@@ -222,7 +222,7 @@ async function getDailyLeaderboard(problems_db_key) {
 
 async function makeLeaderboardEmbed(db_key, color, lb_name) {
     const top_5 = await getDailyLeaderboard(db_key);
-    const desc = "";
+    let desc = "";
     for (const entry of top_5) {
         desc += `${entry.score}: ${entry.name}\n`;
     }

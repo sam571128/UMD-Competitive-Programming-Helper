@@ -9,31 +9,32 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply();
         const user = interaction.user.id;
-        const username = interaction.user.displayName;
+        const username = interaction.user.displayName || interaction.user.username || interaction.user.tag;
 
         try {
             const handle = await getData(user);
-            if(handle == undefined) {
-                interaction.editReply(`You are not registered with the bot! Use the /cf_reg command to register first.`);
+            if(handle === undefined) {
+                await interaction.editReply(`You are not registered with the bot! Use the /cf_reg command to register first.`);
                 return;
             }
         } catch (e) {
-            interaction.editReply("There is an error with the database, please contact Sam");
+            await interaction.editReply("There is an error with the database, please contact Sam");
             return;
         }
 
         const users_key = 'DAILY_LB_USERS';
         const username_key_prefix = 'DLBU_UNAME_';
 
-        saveData(username_key_prefix + user, username);
+        await saveData(username_key_prefix + user, username);
 
-        const curr_list = getData(users_key);
+        let curr_list = await getData(users_key);
+        if (!Array.isArray(curr_list)) curr_list = [];
         
         if (!curr_list.includes(user)) {
             const new_list = [...curr_list, user];
-            saveData(users_key, new_list);
+            await saveData(users_key, new_list);
         }
 
-        interaction.editReply("Successfully Registered!");
+        await interaction.editReply("Successfully Registered!");
     },
 }

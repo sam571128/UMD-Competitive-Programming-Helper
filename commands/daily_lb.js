@@ -8,6 +8,11 @@ module.exports = {
           
     async execute(interaction) {
         await interaction.deferReply();
-        sendDailyLeaderboardMessage(interaction.channel);
+        try {
+            await sendDailyLeaderboardMessage(interaction.channel);
+            await interaction.editReply('Leaderboard sent!');
+        } catch (e) {
+            await interaction.editReply('Failed to send leaderboard: ' + (e.message || e));
+        }
     },
 }
