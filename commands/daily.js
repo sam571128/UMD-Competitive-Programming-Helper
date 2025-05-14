@@ -181,7 +181,8 @@ async function getDailyLeaderboard(problems_db_key) {
         const prob_key = problem.contestId + problem.index;
         prob_set.add(prob_key);
     }
-    const users = await getData('DAILY_LB_USERS');
+    let users = await getData('DAILY_LB_USERS');
+    if (!Array.isArray(users)) users = [];
 
     const data = []
     for (const user of users) {
