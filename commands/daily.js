@@ -174,7 +174,8 @@ async function getSubmissions(handle) {
 
 
 async function getDailyLeaderboard(problems_db_key) {
-    const problems = await getData(problems_db_key);
+    let problems = await getData(problems_db_key);
+    if (!Array.isArray(problems)) problems = [];
     const prob_set = new Set();
     for (const problem of problems) {
         const prob_key = problem.contestId + problem.index;
