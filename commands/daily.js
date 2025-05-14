@@ -266,7 +266,7 @@ async function sendDailyProblems(client, message) {
         console.error('Daily problems not found: error fetching or creating daily problems.');
     }
 
-    sendDailyLeaderboardMessage(channel)
+    // sendDailyLeaderboardMessage(channel)
     sendDailyProblemMessage(dailyProblems, channel);
 }
 
