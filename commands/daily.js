@@ -228,11 +228,14 @@ async function makeLeaderboardEmbed(db_key, color, lb_name) {
     for (const entry of top_5) {
         desc += `${entry.score}: ${entry.name}\n`;
     }
+    if (desc.trim().length === 0) {
+        desc = "No one on the leaderboard yet!";
+    }
     const embed = new EmbedBuilder()
         .setColor(color)
         .setTitle(`${lb_name} Leaderboard`)
-        .setDescription(desc)
-    return embed
+        .setDescription(desc);
+    return embed;
 }
 
 async function sendDailyLeaderboardMessage(channel) {
